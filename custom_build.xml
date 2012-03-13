@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="android_jenkins">
+
+    <!--
+        (C)2012 Seweryn 'cadavre' Zeman
+        Jazzy Innovations Sp. z o.o.
+
+        This build.xml includes targets for:
+            - pmd
+            - cpd
+            - findbugs
+            - classycle
+            - jcsc
+            - javancss
+            - checkstyle
+
+        REMEMBER:
+            0. Fill proper android-aant path below!
+            1. Copy or ln jdepend-<version>.jar to /usr/share/ant/lib
+            2. Add Emma .xml report in main Android SDK build.xml file:
+               <xml outfile="${reports.dir}/emma.xml" />
+    -->
+
+    <!-- Default home folders -->
+    <property name="android-aant.home" value="/path/to/android-aant" />
+    
+    <property name="tools.home" value="${android-aant.home}/aant" />
+    <property name="reports.dir" value="../reports" />
+    <property name="android-jar-file" value="${sdk.dir}/platforms/${target}/android.jar" />
+    <property name="findbugs.home" value="${tools.home}/findbugs-2.0.0" />
+    <property name="jcsc.home" value="${tools.home}/jcsc" />
+    <property name="pmd.home" value="${tools.home}/pmd-bin-4.3" />
+    <property name="jdepend.home" value="${tools.home}/jdepend-2.9.1" />
+    <property name="checkstyle.home" value="${tools.home}/checkstyle-5.5" />
+    <property name="pmd-ruleset-file" value="${pmd.home}/android-rules.xml" />
+    <property name="jdepend-config-file" value="${jdepend.home}/jdepend.properties"/>
+
+    <!-- Recursive paths -->
+    <path id="tools.classpath">
+        <fileset dir="${tools.home}">
+            <include name="**/**/*.jar" />
+        </fileset>
+    </path>
+    <path id="bin.classpath">
+        <dirset dir="${out.dir}">
+            <exclude name="**/test"/>
+        </dirset>
+    </path>
+
+    <!-- Task definitions -->
+    <taskdef name="classycleReport" classname="classycle.ant.ReportTask"
+        classpathref="tools.classpath" />
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
+        classpathref="tools.classpath" />
+    <taskdef name="jcsc" classname="rj.tools.jcsc.ant.JCSCTask"
+        classpathref="tools.classpath" />
+    <taskdef name="javancss" classname="javancss.JavancssAntTask"
+        classpathref="tools.classpath" />
+    <taskdef name="pmd" classname="net.sourceforge.pmd.ant.PMDTask"
+        classpathref="tools.classpath" />
+    <taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask"
+        classpathref="tools.classpath" />
+    <taskdef resource="checkstyletask.properties"
+        classpath="${checkstyle.home}/checkstyle-5.5-all.jar"/>
+
+    <!-- Some setup -->
+    <mkdir dir="${reports.dir}" />
+    <mkdir dir="${reports.dir}/jcsc" />
+
+    <!-- Targets -->
+    <target name="classycle">
+        <classycleReport
+            reportfile="${reports.dir}/classycle.xml"
+            title="Classycle report">
+            <fileset dir="${out.dir}">
+                <include name="**/*.class" />
+                <exclude name="**/test" />
+            </fileset>
+        </classycleReport>
+    </target>
+
+    <target name="findbugs">
+        <findbugs home="${findbugs.home}"
+            output="xml"
+            outputFile="${reports.dir}/findbugs.xml"
+            excludeFilter="${android-aant.home}/findbugs-exclude.xml">
+            <auxclasspath>
+                <pathelement location="${android-jar-file}" />
+                <fileset dir="${jar.libs.dir}">
+                    <include name="*.jar" />
+                </fileset>
+            </auxclasspath>
+            <sourcePath path="${source.dir}" />
+            <class location="${out.dir}" />
+        </findbugs>
+    </target>
+
+    <target name="jcsc">
+        <jcsc
+            rules="${jcsc.home}/jcsc.android.xml"
+            destdir="${reports.dir}/jcsc"
+            copyassociatedfiles="true"
+            jcschome="${jcsc.home}">
+            <fileset dir="${source.dir}">
+                <include name="**/*.java" />
+            </fileset>
+        </jcsc>
+    </target>
+
+    <target name="javancss">
+        <javancss
+            srcdir="${source.dir}"
+            includes="**/*.java"
+            generateReport="yes"
+            outputfile="${reports.dir}/javancss.xml"
+            format="xml"
+            packageMetrics="yes"
+            classMetrics="yes"
+            functionMetrics="yes" />
+    </target>
+
+    <target name="pmd">
+        <pmd shortFilenames="true">
+            <ruleset>basic</ruleset>
+            <ruleset>android</ruleset>
+            <formatter type="xml" toFile="${reports.dir}/pmd.xml" />
+            <auxclasspath>
+                <pathelement location="${android-jar-file}" />
+                <fileset dir="${jar.libs.dir}">
+                    <include name="*.jar" />
+                </fileset>
+            </auxclasspath>
+            <fileset dir="${source.dir}" includes="**/*.java" />
+        </pmd>
+        <cpd minimumTokenCount="100"
+            outputFile="${reports.dir}/cpd.xml"
+            format="xml">
+            <fileset dir="${source.dir}">
+                <include name="**/*.java" />
+            </fileset>
+        </cpd>
+    </target>
+
+    <target name="checkstyle">
+        <checkstyle config="${checkstyle.home}/checkstyle.xml"
+            failureProperty="checkstyle.failure"
+            failOnViolation="false">
+            <formatter type="xml" 
+                tofile="${reports.dir}/checkstyle.xml"/>
+            <fileset dir="${source.dir}" includes="**/*.java"/>
+        </checkstyle>
+    </target>
+
+    <target name="jdepend">
+        <jdepend
+            fork="true"
+            outputfile="${reports.dir}/jdepend.xml"
+            format="xml"
+            classpathref="tools.classpath">
+            <exclude name="android.*" />
+            <sourcespath>
+                <pathelement location="${source.dir}" />
+            </sourcespath>
+            <classespath>
+                <path refid="bin.classpath"/>
+            </classespath>
+        </jdepend>
+    </target>
+
+</project>

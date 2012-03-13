@@ -1,0 +1,3 @@
+    <import file="/path/to/android-aant/custom_build.xml" />
+
+</project>
